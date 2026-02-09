@@ -2381,7 +2381,7 @@ class Product extends CommonObject
 		$pu_ttc = $this->price_ttc;
 		$price_min = $this->price_min;
 		$price_min_ttc = $this->price_min_ttc;
-		$price_base_type = $this->price_base_type;
+		$price_base_type = !empty($this->price_base_type) ? $this->price_base_type : 'HT';
 
 		// if price by customer / level
 		if (getDolGlobalString('PRODUIT_CUSTOMER_PRICES_AND_MULTIPRICES')) {
@@ -2404,7 +2404,7 @@ class Product extends CommonObject
 							$price_min = price($custprice_line->price_min);
 							$price_min_ttc = price($custprice_line->price_min_ttc);
 							$pu_ttc = price($custprice_line->price_ttc);
-							$price_base_type = $custprice_line->price_base_type;
+							$price_base_type = !empty($custprice_line->price_base_type) ? $custprice_line->price_base_type : 'HT';
 							$tva_tx = $custprice_line->tva_tx;
 							if ($custprice_line->default_vat_code && !preg_match('/\(.*\)/', $tva_tx)) {
 								$tva_tx .= ' (' . $custprice_line->default_vat_code . ')';
@@ -2474,7 +2474,7 @@ class Product extends CommonObject
 							$price_min = price($custprice_line->price_min);
 							$price_min_ttc = price($custprice_line->price_min_ttc);
 							$pu_ttc = price($custprice_line->price_ttc);
-							$price_base_type = $custprice_line->price_base_type;
+							$price_base_type = !empty($custprice_line->price_base_type) ? $custprice_line->price_base_type : 'HT';
 							$tva_tx = $custprice_line->tva_tx;
 							if ($custprice_line->default_vat_code && !preg_match('/\(.*\)/', $tva_tx)) {
 								$tva_tx .= ' (' . $custprice_line->default_vat_code . ')';
