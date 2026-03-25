@@ -1236,6 +1236,26 @@ class EmailCollector extends CommonObject
 						}
 					}
 
+					// Fallback for providers (e.g. Microsoft) where token EOL is not set but tokens expire after ~1h.
+					// When EOL_UNKNOWN (-9001) or EOL_NEVER_EXPIRES (-9002) is returned we cannot rely on getEndOfLife().
+					// Instead we use a 'retrieved_at' timestamp stored in the token's extra params to detect staleness.
+					if (!$expire && is_object($tokenobj) && method_exists($tokenobj, 'getExtraParams') && method_exists($tokenobj, 'getEndOfLife')) {
+						$endOfLife = $tokenobj->getEndOfLife();
+						if ($endOfLife === -9001 || $endOfLife === -9002) {
+							$extraParams = $tokenobj->getExtraParams();
+							if (!empty($extraParams['retrieved_at']) && (time() - (int) $extraParams['retrieved_at']) > 3000) {
+								// Token is older than 50 minutes; proactively refresh before it hits the 1-hour hard expiry.
+								$expire = true;
+								$this->debuginfo .= 'Token age > 50min with unknown EOL, forcing proactive refresh for '.$OAUTH_SERVICENAME.'<br>';
+							} elseif (empty($extraParams['retrieved_at'])) {
+								// First time we see this token without a timestamp — stamp it now so the next run can measure age.
+								$extraParams['retrieved_at'] = time();
+								$tokenobj->setExtraParams($extraParams);
+								$storage->storeAccessToken($OAUTH_SERVICENAME, $tokenobj);
+							}
+						}
+					}
+
 					// Token expired so we refresh it
 					if (is_object($tokenobj) && $expire) {
 						$this->debuginfo .= 'Refresh token '.$OAUTH_SERVICENAME.'<br>';
@@ -1264,6 +1284,12 @@ class EmailCollector extends CommonObject
 
 						// We have to save the token because answer give it only once
 						$tokenobj->setRefreshToken($refreshtoken);
+						// Stamp retrieved_at so age-based expiry detection can measure from now
+						if (method_exists($tokenobj, 'getExtraParams') && method_exists($tokenobj, 'setExtraParams')) {
+							$refreshedExtraParams = $tokenobj->getExtraParams();
+							$refreshedExtraParams['retrieved_at'] = time();
+							$tokenobj->setExtraParams($refreshedExtraParams);
+						}
 						$storage->storeAccessToken($OAUTH_SERVICENAME, $tokenobj);
 					}
 					$tokenobj = $storage->retrieveAccessToken($OAUTH_SERVICENAME);
